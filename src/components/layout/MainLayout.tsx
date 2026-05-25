@@ -41,26 +41,26 @@ const MainLayout = () => {
           transition={{ duration: 0.2 }}
         >
           {/* Layout area BELOW navbar */}
-          <div className="flex-1 overflow-hidden relative">
-            <div className="mx-auto max-w-[1780px] px-4 h-full">
-              <div className="grid grid-cols-12 gap-4 h-full">
+          <div className="flex-1 min-h-0 overflow-hidden relative flex flex-col h-full">
+            <div className="mx-auto max-w-[1780px] px-4 w-full flex-1 min-h-0 flex flex-col h-full">
+              <div className="grid grid-cols-12 gap-4 flex-1 min-h-0 w-full h-full">
 
                 {/* LEFT SIDEBAR */}
-                <aside className="hidden lg:block lg:col-span-3 h-full py-4">
+                <aside className="hidden lg:block lg:col-span-3 h-full py-4 min-h-0">
                   <div className="h-full overflow-y-auto scrollbar-hide">
                     <SidebarLeft />
                   </div>
                 </aside>
 
                 {/* CENTER */}
-                <main className={`col-span-12 lg:col-span-9 xl:col-span-6 h-full pb-20 sm:pb-4 ${location.pathname.includes("quick-chat") ? "overflow-hidden" : "overflow-y-auto"} scrollbar-hide`}>
-                  <div className="pt-3">
+                <main className={`col-span-12 lg:col-span-9 xl:col-span-6 h-full ${location.pathname.includes("quick-chat") ? "pb-0 overflow-hidden flex flex-col" : "pb-20 sm:pb-4 overflow-y-auto"} scrollbar-hide min-h-0`}>
+                  <div className={location.pathname.includes("quick-chat") ? "flex-1 min-h-0 flex flex-col pt-0" : "pt-3"}>
                     <Outlet />
                   </div>
                 </main>
                 
                 {/* RIGHT SIDEBAR */}
-                <aside className="hidden xl:block xl:col-span-3 h-full py-4">
+                <aside className="hidden xl:block xl:col-span-3 h-full py-4 min-h-0">
                   <div className="h-full overflow-y-auto scrollbar-hide">
                     <SidebarRight />
                   </div>

@@ -121,12 +121,14 @@ export function SafeImage({
   sessionId,
   className,
   onClick,
+  isSticker,
   ...props
 }: {
   mediaPayload?: string;
   sessionId: string;
   className?: string;
   onClick?: (e: React.MouseEvent<HTMLImageElement>) => void;
+  isSticker?: boolean;
   [key: string]: any;
 }) {
   const [url, setUrl] = useState<string>("");
@@ -135,7 +137,7 @@ export function SafeImage({
 
   useEffect(() => {
     if (!mediaPayload) return;
-    if (mediaPayload.startsWith("data:") || mediaPayload.startsWith("blob:") || mediaPayload.startsWith("http")) {
+    if (mediaPayload.startsWith("data:") || mediaPayload.startsWith("blob:") || mediaPayload.startsWith("http") || mediaPayload.startsWith("/")) {
       setUrl(mediaPayload);
       return;
     }
@@ -161,7 +163,10 @@ export function SafeImage({
     fetch(`${API_BASE_URL}/api/chat/${sessionId}/media/${mediaPayload}`, { headers })
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to fetch");
-        const blob = await res.blob();
+        let blob = await res.blob();
+        if (isSticker) {
+          blob = new Blob([blob], { type: "image/svg+xml" });
+        }
         if (!active) return;
         const objectUrl = URL.createObjectURL(blob);
         globalCache.set(mediaPayload, objectUrl);
@@ -178,7 +183,7 @@ export function SafeImage({
     return () => {
       active = false;
     };
-  }, [mediaPayload, sessionId]);
+  }, [mediaPayload, sessionId, isSticker]);
 
   if (loading) {
     return (
@@ -393,7 +398,7 @@ function PrivateMediaViewer({
       onContextMenu={preventDefault}
     >
       {/* Top Header: Timer and Close Button */}
-      <div className="absolute top-6 inset-x-6 z-[160] flex items-center justify-between pointer-events-none">
+      <div className="absolute top-10 inset-x-6 z-[160] flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-3 bg-white/10 px-4 py-2 rounded-2xl backdrop-blur-md border border-white/10 shadow-2xl pointer-events-auto">
           {/* Circular Countdown Progress */}
           <div className="relative w-6 h-6 flex items-center justify-center font-black text-xs text-white">
@@ -445,7 +450,7 @@ function PrivateMediaViewer({
         )}
 
         {!loading && !error && url && (
-          <div className="relative max-w-full max-h-full flex items-center justify-center pointer-events-none">
+          <div className="relative w-full h-full flex items-center justify-center pointer-events-none">
             {msg.messageType === "IMAGE" ? (
               <img 
                 src={url} 
@@ -489,16 +494,13 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
   const [selectedTimer, setSelectedTimer] = useState<3 | 10 | 30>(10);
   const [privateMedia, setPrivateMedia] = useState<ChatMessageDto | null>(null);
 
-  const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat.messages, chat.partnerTyping, chat.status]);
-
   useEffect(() => {
-    if (chat.status === "CONNECTED") inputRef.current?.focus();
+    if (chat.status === "CONNECTED") {
+      inputRef.current?.focus({ preventScroll: true });
+    }
   }, [chat.status]);
 
   useEffect(() => {
@@ -508,6 +510,14 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
       setShowAttachMenu(false);
     }
   }, [chat.status]);
+
+  // Auto-resize textarea height as user types
+  useEffect(() => {
+    const textarea = inputRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 128)}px`;
+  }, [draft]);
 
   const handleSend = () => {
     if (!draft.trim()) return;
@@ -609,7 +619,7 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
       const response = await fetch(stickerUrl);
       const blob = await response.blob();
 
-      await sendMedia(chat.session.sessionId, {
+      const res = await sendMedia(chat.session.sessionId, {
         type: "STICKER",
         file: blob,                             // ← CORRECT: Blob directly
         mimeType: blob.type || "image/png",     // ← Safe fallback
@@ -617,6 +627,15 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
         viewOnce: false,
         replyToId: replyTo?.messageId
       });
+
+      // Pre-seed local sticker URL in cache for instant rendering
+      if (res?.data?.messageId) {
+        const fileId = res.data.messageId;
+        const globalCache = (window as any).__mediaCache || new Map();
+        (window as any).__mediaCache = globalCache;
+        globalCache.set(fileId, stickerUrl);
+      }
+
       setShowStickerMenu(false);
       setReplyTo(null);
     } catch (err) {
@@ -697,11 +716,8 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
         </div>
       )}
 
-            {/* ── Body: grows, leaves room for pinned footer ── */}
-      <div 
-        className="flex-1 min-h-0 flex flex-col z-10" 
-        style={{ paddingBottom: chat.status === "PARTNER_LEFT" ? "160px" : "72px" }}
-      >
+            {/* ── Body: grows and shrinks dynamically ── */}
+      <div className="flex-1 min-h-0 flex flex-col z-10">
         <AnimatePresence mode="wait">
           {chat.status === "IDLE" && (
             <motion.div key="idle" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="flex-1 min-h-0">
@@ -719,7 +735,6 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
                 messages={chat.messages ?? []}
                 myId={chat.session?.yourAnonymousId ?? ""}
                 partnerTyping={chat.partnerTyping}
-                bottomRef={bottomRef}
                 onReply={(msg) => setReplyTo({ messageId: msg.messageId, senderId: msg.senderId, content: msg.content, messageType: msg.messageType })}
                 onMediaClick={(items, index) => setFullscreenMedia({ items, index })}
                 onUnlockPrivateMedia={(msg) => setPrivateMedia(msg)}
@@ -735,9 +750,9 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
         </AnimatePresence>
       </div>
 
-      {/* ── Footer: absolutely anchored to bottom, never shifts ── */}
-      <footer className="absolute bottom-0 left-0 right-0 z-30 p-2 md:p-3 pb-[env(safe-area-inset-bottom,8px)] bg-base-200/95 backdrop-blur-xl border-t border-base-content/5">
-        {(chat.status === "CONNECTED" || chat.status === "PARTNER_LEFT") && (
+      {/* ── Footer: flex flow at bottom, matches layout dynamically ── */}
+      {(chat.status === "CONNECTED" || chat.status === "PARTNER_LEFT") && (
+        <footer className="relative z-30 p-2 md:p-3 pb-[max(env(safe-area-inset-bottom,0px),20px)] bg-base-200/95 backdrop-blur-xl border-t border-base-content/5 shrink-0 animate-in slide-in-from-bottom duration-300">
           <div className="max-w-[1000px] mx-auto">
             <AnimatePresence>
               {replyTo && (
@@ -789,7 +804,7 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
                       onChange={(e) => { setDraft(e.target.value); chat.notifyTyping(); }}
                       onKeyDown={handleKeyDown}
                       placeholder="Message"
-                      className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-base-content placeholder-base-content/40 resize-none py-[7px] px-2 text-[13px] max-h-32 min-h-[18px] leading-tight shadow-none"
+                      className="flex-1 bg-transparent border-none outline-none focus:outline-none focus:ring-0 text-base-content placeholder-base-content/40 resize-none py-[7px] px-2 text-[16px] md:text-[13px] max-h-32 min-h-[18px] leading-tight shadow-none"
                     />
 
                     <div className="relative group/attach flex items-end shrink-0 mb-[1px] right-0.5">
@@ -848,8 +863,8 @@ export default function StrangerChat({ onClose, standalone }: { onClose?: () => 
               </div>
             )}
           </div>
-        )}
-      </footer>
+        </footer>
+      )}
 
       {/* ── Media Preview Sheet ── */}
       <AnimatePresence>
@@ -1051,7 +1066,6 @@ function MessageArea({
   messages, 
   myId, 
   partnerTyping, 
-  bottomRef, 
   onReply, 
   onMediaClick,
   onUnlockPrivateMedia,
@@ -1060,7 +1074,6 @@ function MessageArea({
   messages: ChatMessageDto[]; 
   myId: string; 
   partnerTyping: boolean; 
-  bottomRef: React.RefObject<HTMLDivElement | null>; 
   onReply: (r: { messageId: string; senderId: string; content?: string; messageType: MessageType }) => void; 
   onMediaClick: (items: { url: string, type: MessageType }[], index: number) => void;
   onUnlockPrivateMedia: (msg: ChatMessageDto) => void;
@@ -1077,6 +1090,34 @@ function MessageArea({
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const messageAreaRef = useRef<HTMLDivElement>(null);
+  const isFirstScrollRef = useRef(true);
+
+  // Scroll to bottom when messages or typing status updates
+  useEffect(() => {
+    if (messageAreaRef.current) {
+      messageAreaRef.current.scrollTo({
+        top: messageAreaRef.current.scrollHeight,
+        behavior: isFirstScrollRef.current ? "auto" : "smooth"
+      });
+      isFirstScrollRef.current = false;
+    }
+  }, [messages, partnerTyping]);
+
+  // Scroll to bottom on resize (e.g. when mobile keyboard opens/closes)
+  useEffect(() => {
+    const container = messageAreaRef.current;
+    if (!container) return;
+
+    const observer = new ResizeObserver(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth"
+      });
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   // Close context menu on click outside or scroll
   useEffect(() => {
@@ -1120,6 +1161,15 @@ function MessageArea({
     }
   };
 
+  const hasUserMessages = useMemo(() => {
+    return messages.some(
+      (m) =>
+        m.senderId !== "SYSTEM" &&
+        m.messageType !== "USER_LEFT" &&
+        m.messageType !== "SYSTEM"
+    );
+  }, [messages]);
+
   // Chunk consecutive media messages sent within 60s
   const groupedMessages = useMemo(() => {
     const groups: ChatMessageDto[][] = [];
@@ -1146,8 +1196,13 @@ function MessageArea({
   }, [messages]);
 
   return (
-    <div ref={messageAreaRef} className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 md:p-4 scrollbar-hide flex flex-col gap-2 relative">
-      <div className="mt-auto" />
+    <div 
+      ref={messageAreaRef} 
+      className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-2 md:p-4 scrollbar-hide flex flex-col gap-2 relative ${
+        !hasUserMessages ? "justify-center" : ""
+      }`}
+    >
+      {hasUserMessages && <div className="mt-auto" />}
 
       {groupedMessages.map((group, i) => (
         <Bubble 
@@ -1174,7 +1229,7 @@ function MessageArea({
           </div>
         </motion.div>
       )}
-      <div ref={bottomRef} className="h-4 shrink-0" />
+      <div className="h-4 shrink-0" />
 
       <AnimatePresence>
         {contextMenu && (
@@ -1323,7 +1378,13 @@ function Bubble({
     if (msg.messageType === "STICKER") {
       return (
         <div className="relative">
-          <img src={msg.mediaPayload} alt="Sticker" className="w-32 h-32 object-contain drop-shadow-lg" />
+          <SafeImage 
+            mediaPayload={msg.mediaPayload} 
+            sessionId={sessionId}
+            className="w-32 h-32 object-contain drop-shadow-lg" 
+            alt="Sticker" 
+            isSticker={true}
+          />
         </div>
       );
     }

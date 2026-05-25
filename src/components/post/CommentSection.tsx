@@ -151,6 +151,38 @@ function getAvatarSrc(username: string | undefined, profileImageUrl?: string): s
   );
 }
 
+function flattenComments(commentsList: CommentDto[]): CommentDto[] {
+  const result: CommentDto[] = [];
+  
+  function recurse(list: CommentDto[]) {
+    for (const c of list) {
+      const { replies, ...rest } = c;
+      result.push(rest as CommentDto);
+      if (replies && replies.length > 0) {
+        recurse(replies);
+      }
+    }
+  }
+  
+  recurse(commentsList);
+  return result;
+}
+
+function formatCommentText(text: string) {
+  if (!text) return "";
+  const parts = text.split(/(@[a-zA-Z0-9_]+)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith("@") && part.length > 1) {
+      return (
+        <span key={index} className="text-[#1D4ED8] font-bold hover:underline cursor-pointer">
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+}
+
 const LIMIT = 10;
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -211,7 +243,12 @@ function AutoTextarea({
   }, [value]);
 
   useEffect(() => {
-    if (autoFocus) ref.current?.focus();
+    if (autoFocus && ref.current) {
+      const el = ref.current;
+      el.focus();
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    }
   }, [autoFocus]);
 
   return (
@@ -255,6 +292,10 @@ function CommentInput({
   const [focused, setFocused] = useState(autoFocus);
 
   const avatarUrl = getAvatarSrc(avatarSeed);
+
+  useEffect(() => {
+    setText(initialValue);
+  }, [initialValue]);
 
   async function submit() {
     const trimmed = text.trim();
@@ -322,14 +363,14 @@ function CommentInput({
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="flex items-center justify-between gap-4 border-t border-base-content/5 px-4 py-2.5">
-                  <div className="flex flex-col">
+                <div className="flex items-center justify-between gap-2 sm:gap-4 border-t border-base-content/5 px-4 py-2.5">
+                  <div className="hidden sm:flex flex-col">
                     <p className="text-[10px] text-base-content/40 flex items-center gap-1">
                       <Sparkles size={10} className="text-primary/60" />
                       Ctrl+Enter to send
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 ml-auto">
                     {onCancel && (
                       <button
                         onClick={onCancel}
@@ -366,27 +407,27 @@ function CommentInput({
 // Helper functions to recursively count comments inside a subtree
 // ═══════════════════════════════════════════════════════════════════════════════
 function countCommentsInSubtree(comment: CommentDto): number {
-  let count = 1;
-  if (comment.replies && comment.replies.length > 0) {
-    for (const reply of comment.replies) {
-      count += countCommentsInSubtree(reply);
+  const loadedReplies = comment.replies ?? [];
+  let subCount = 0;
+  if (loadedReplies.length > 0) {
+    for (const reply of loadedReplies) {
+      subCount += countCommentsInSubtree(reply);
     }
-  } else {
-    count += comment.replyCount ?? 0;
   }
-  return count;
+  const unloadedDirectCount = Math.max(0, (comment.replyCount ?? 0) - loadedReplies.length);
+  return 1 + subCount + unloadedDirectCount;
 }
 
 function getCommentSubtreeCount(comment: CommentDto, repliesList: CommentDto[]): number {
-  let total = 1;
-  if (repliesList && repliesList.length > 0) {
-    for (const r of repliesList) {
-      total += countCommentsInSubtree(r);
+  let subCount = 0;
+  const list = repliesList ?? [];
+  if (list.length > 0) {
+    for (const r of list) {
+      subCount += countCommentsInSubtree(r);
     }
-  } else {
-    total += comment.replyCount ?? 0;
   }
-  return total;
+  const unloadedDirectCount = Math.max(0, (comment.replyCount ?? 0) - list.length);
+  return 1 + subCount + unloadedDirectCount;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -399,9 +440,11 @@ type SingleCommentProps = {
   depth: number;
   currentUsername?: string;
   currentRole?: string;
-  onDeleted: (id: number, countToRemove: number) => void;
+  onDeleted: (id: number, countToRemove: number, parentId?: number) => void;
   onUpdated: (updated: CommentDto) => void;
   onReplyAdded: (parentId: number, reply: CommentDto) => void;
+  parentAuthorName?: string;
+  parentRepliesOpen?: boolean;
 };
 
 function SingleComment({
@@ -414,6 +457,8 @@ function SingleComment({
   onDeleted,
   onUpdated,
   onReplyAdded,
+  parentAuthorName,
+  parentRepliesOpen,
 }: SingleCommentProps) {
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -426,10 +471,32 @@ function SingleComment({
   );
   const [deleting, setDeleting] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const isFirstRender = useRef(true);
+
+  useEffect(() => {
+    if (parentRepliesOpen === false) {
+      setRepliesOpen(false);
+    }
+  }, [parentRepliesOpen]);
+
+  const handleReplyUpdated = useCallback((updated: CommentDto) => {
+    setReplies((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+  }, []);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    onUpdated({
+      ...comment,
+      replies: replies,
+    });
+  }, [replies, comment.id, onUpdated]);
   
   const isOwner = !!currentUsername && comment.author?.username === currentUsername;
   const isAdmin = currentRole === "ROLE_ADMIN";
-  const replyCount = comment.replyCount ?? replies.length;
+  const replyCount = getCommentSubtreeCount(comment, replies) - 1;
   const authorName = getDisplayName(comment);
   const avatarSrc = getAvatarSrc(comment.author?.username, comment.author?.profileImageUrl);
 
@@ -470,6 +537,7 @@ function SingleComment({
         : `/api/comments/social-posts/${postId}`;
     const res = await apiPost(endpoint, { text, parentCommentId: comment.id });
     const created: CommentDto = res?.data ?? res;
+    
     setReplies((prev) => [created, ...prev]);
     setRepliesOpen(true);
     setShowReplyBox(false);
@@ -488,19 +556,31 @@ function SingleComment({
     try {
       await apiDelete(`/api/comments/${comment.id}`);
       const countToRemove = getCommentSubtreeCount(comment, replies);
-      onDeleted(comment.id, countToRemove);
+      onDeleted(comment.id, countToRemove, comment.parentCommentId ?? undefined);
       setConfirmDeleteOpen(false);
     } catch {
       setDeleting(false);
     }
   }
 
-  function handleReplyDeleted(replyId: number, countToRemove: number) {
-    setReplies((prev) => prev.filter((r) => r.id !== replyId));
-    onDeleted(replyId, countToRemove);
-  }
+  const handleReplyDeleted = useCallback((replyId: number, countToRemove: number, childParentId?: number) => {
+    setReplies((prev) =>
+      prev
+        .map((r) => {
+          if (r.id === childParentId) {
+            return {
+              ...r,
+              replyCount: Math.max(0, (r.replyCount ?? 0) - countToRemove),
+            };
+          }
+          return r;
+        })
+        .filter((r) => r.id !== replyId)
+    );
+    onDeleted(replyId, countToRemove, childParentId);
+  }, [onDeleted]);
 
-  function handleNestedReplyAdded(parentId: number, reply: CommentDto) {
+  const handleNestedReplyAdded = useCallback((parentId: number, reply: CommentDto) => {
     setReplies((prev) =>
       prev.map((r) =>
         r.id === parentId
@@ -513,7 +593,9 @@ function SingleComment({
       )
     );
     onReplyAdded(parentId, reply);
-  }
+  }, [onReplyAdded]);
+
+
 
   return (
     <motion.div
@@ -521,18 +603,30 @@ function SingleComment({
       initial="hidden"
       animate="visible"
       exit="exit"
-      className={`${depth > 0 ? "border-l-[1.5px] border-base-content/8 pl-5 ml-4.5" : ""}`}
+      className={`${
+        depth > 0
+          ? depth === 1
+            ? "border-l-[1.5px] border-base-content/8 pl-3 ml-1.5 sm:pl-5 sm:ml-4.5"
+            : depth === 2
+              ? "border-l-[1.5px] border-base-content/6 pl-2.5 ml-1 sm:pl-5 sm:ml-4.5"
+              : "border-l-0 pl-0 ml-0"
+          : ""
+      }`}
     >
-      <div className="flex items-start gap-3 group">
+      <div className="flex items-start group gap-3">
         {/* Avatar with subtle glow */}
-        <div className="relative shrink-0">
-          <img
-            src={avatarSrc}
-            alt={authorName}
-            className="w-8.5 h-8.5 rounded-full object-cover border border-base-content/5 bg-base-200 mt-0.5"
-          />
-          {depth === 0 && <div className="absolute inset-0 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.02)] pointer-events-none" />}
-        </div>
+        {depth < 2 && (
+          <div className="relative shrink-0">
+            <img
+              src={avatarSrc}
+              alt={authorName}
+              className={`rounded-full object-cover border border-base-content/5 bg-base-200 mt-0.5 shrink-0 ${
+                depth === 0 ? "w-8.5 h-8.5" : "w-7 h-7"
+              }`}
+            />
+            {depth === 0 && <div className="absolute inset-0 rounded-full shadow-[0_0_10px_rgba(0,0,0,0.02)] pointer-events-none" />}
+          </div>
+        )}
 
         <div className="flex-1 min-w-0">
           {editing ? (
@@ -551,14 +645,23 @@ function SingleComment({
             <>
               {/* Comment bubble with Glassmorphism */}
               <div className="inline-block max-w-[95%] rounded-2xl rounded-tl-sm bg-base-200/50 backdrop-blur-sm border border-base-content/5 px-4 py-3 shadow-sm hover:bg-base-200/80 transition-colors">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-bold text-primary tracking-tight">{authorName}</span>
-                  {comment.author?.username === "admin" && (
-                    <span className="bg-[#1D4ED8]/10 text-primary text-[9px] font-bold px-1.5 py-0.5 rounded-full">STAFF</span>
-                  )}
+                <div className="flex flex-col mb-1">
+                  <div className="flex items-center gap-2">
+                    {depth >= 2 && (
+                      <img
+                        src={avatarSrc}
+                        alt={authorName}
+                        className="w-4.5 h-4.5 rounded-full object-cover border border-base-content/5 bg-base-200 shrink-0"
+                      />
+                    )}
+                    <span className="text-xs font-bold text-primary tracking-tight">{authorName}</span>
+                    {comment.author?.username === "admin" && (
+                      <span className="bg-[#1D4ED8]/10 text-primary text-[9px] font-bold px-1.5 py-0.5 rounded-full">STAFF</span>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap break-words text-base-content/85">
-                  {comment.text}
+                  {formatCommentText(comment.text)}
                 </p>
               </div>
 
@@ -627,6 +730,7 @@ function SingleComment({
               >
                 <CommentInput
                   placeholder={`Replying to ${authorName}…`}
+                  initialValue={`@${comment.author?.username} `}
                   onSubmit={handleReply}
                   onCancel={() => setShowReplyBox(false)}
                   submitLabel="Reply"
@@ -638,61 +742,61 @@ function SingleComment({
           </AnimatePresence>
 
           {/* Replies Container */}
-          <AnimatePresence>
-            {repliesOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                className="overflow-hidden mt-4 space-y-4"
-              >
-                {loadingReplies && replies.length === 0 && (
-                  <div className="flex items-center gap-2.5 py-1 text-xs opacity-60 ml-4">
-                    <Loader2 size={12} className="animate-spin text-primary" />
-                    <span className="font-medium">Fetching conversation…</span>
-                  </div>
-                )}
-                
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-4"
-                >
-                  {replies.map((reply) => (
-                    <SingleComment
-                      key={reply.id}
-                      comment={reply}
-                      postId={postId}
-                      postType={postType}
-                      depth={depth + 1}
-                      currentUsername={currentUsername}
-                      currentRole={currentRole}
-                      onDeleted={handleReplyDeleted}
-                      onUpdated={(updated) => setReplies((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))}
-                      onReplyAdded={handleNestedReplyAdded}
-                    />
-                  ))}
-                </motion.div>
-
-                {hasMoreReplies && (
-                  <button
-                    onClick={() => loadReplies(repliesCursor)}
-                    disabled={loadingReplies}
-                    className="flex items-center gap-2 text-[11px] font-bold text-primary/80 hover:text-primary transition-all ml-8 py-1 hover:translate-x-1"
-                  >
-                    {loadingReplies ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      <ChevronDown size={12} />
-                    )}
-                    View older replies
-                  </button>
-                )}
-              </motion.div>
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ 
+              opacity: repliesOpen ? 1 : 0, 
+              height: repliesOpen ? "auto" : 0 
+            }}
+            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+            className="overflow-hidden mt-4 space-y-4"
+          >
+            {loadingReplies && replies.length === 0 && (
+              <div className="flex items-center gap-2.5 py-1 text-xs opacity-60 ml-4">
+                <Loader2 size={12} className="animate-spin text-primary" />
+                <span className="font-medium">Fetching conversation…</span>
+              </div>
             )}
-          </AnimatePresence>
+            
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate={repliesOpen ? "visible" : "hidden"}
+              className="space-y-4"
+            >
+              {replies.map((reply) => (
+                <SingleComment
+                  key={reply.id}
+                  comment={reply}
+                  postId={postId}
+                  postType={postType}
+                  depth={depth + 1}
+                  currentUsername={currentUsername}
+                  currentRole={currentRole}
+                  onDeleted={handleReplyDeleted}
+                  onUpdated={handleReplyUpdated}
+                  onReplyAdded={handleNestedReplyAdded}
+                  parentAuthorName={authorName}
+                  parentRepliesOpen={repliesOpen}
+                />
+              ))}
+            </motion.div>
+
+            {hasMoreReplies && (
+              <button
+                onClick={() => loadReplies(repliesCursor)}
+                disabled={loadingReplies}
+                className="flex items-center gap-2 text-[11px] font-bold text-primary/80 hover:text-primary transition-all ml-8 py-1 hover:translate-x-1"
+              >
+                {loadingReplies ? (
+                  <Loader2 size={12} className="animate-spin" />
+                ) : (
+                  <ChevronDown size={12} />
+                )}
+                View older replies
+              </button>
+            )}
+          </motion.div>
         </div>
       </div>
 
@@ -808,18 +912,30 @@ export default function CommentSection({
     setFetchedOnce(true);
   }
 
-  function handleReplyAdded() {
+  const handleReplyAdded = useCallback(() => {
     setCount((n) => n + 1);
-  }
+  }, []);
 
-  function handleDeleted(id: number, countToRemove: number) {
-    setComments((prev) => prev.filter((c) => c.id !== id));
+  const handleDeleted = useCallback((id: number, countToRemove: number, parentId?: number) => {
+    setComments((prev) =>
+      prev
+        .map((c) => {
+          if (c.id === parentId) {
+            return {
+              ...c,
+              replyCount: Math.max(0, (c.replyCount ?? 0) - countToRemove),
+            };
+          }
+          return c;
+        })
+        .filter((c) => c.id !== id)
+    );
     setCount((n) => Math.max(0, n - countToRemove));
-  }
+  }, []);
 
-  function handleUpdated(updated: CommentDto) {
+  const handleUpdated = useCallback((updated: CommentDto) => {
     setComments((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-  }
+  }, []);
 
   const isLoggedIn = !!(localStorage.getItem("authToken") || localStorage.getItem("token"));
 

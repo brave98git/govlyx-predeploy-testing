@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Flame, Newspaper, RefreshCw, Lightbulb } from "lucide-react";
+import { Newspaper, RefreshCw, Lightbulb } from "lucide-react";
 import { motion } from "framer-motion";
 import govlyxLogo from "../../assets/govlyx.svg";
 
@@ -45,10 +45,10 @@ const QuoteWidgetCard = () => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-3 rounded-2xl border border-[#1D4ED8]/10 bg-gradient-to-br from-[#1D4ED8]/5 via-[#1D4ED8]/10 to-transparent shadow-sm relative overflow-hidden group/quote"
+      className="p-2.5 rounded-2xl border border-[#1D4ED8]/10 bg-gradient-to-br from-[#1D4ED8]/5 via-[#1D4ED8]/10 to-transparent shadow-sm relative overflow-hidden group/quote"
     >
       <div className="absolute top-[-30%] right-[-20%] w-24 h-24 bg-[#1D4ED8]/5 rounded-full blur-xl pointer-events-none" />
-      <div className="relative z-10 flex flex-col gap-2">
+      <div className="relative z-10 flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg bg-[#1D4ED8]/10 flex items-center justify-center text-[#1D4ED8]">
@@ -182,10 +182,10 @@ const NewsWidgetCard = () => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-3 rounded-2xl border border-base-300 bg-base-100/50 shadow-sm backdrop-blur-md relative overflow-hidden group/news"
+      className="p-2.5 rounded-2xl border border-base-300 bg-base-100/50 shadow-sm backdrop-blur-md relative overflow-hidden group/news"
     >
       <div className="absolute top-[-30%] right-[-20%] w-24 h-24 bg-base-content/5 rounded-full blur-xl pointer-events-none" />
-      <div className="relative z-10 flex flex-col gap-2">
+      <div className="relative z-10 flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <div className="w-6 h-6 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
@@ -203,11 +203,11 @@ const NewsWidgetCard = () => {
           </button>
         </div>
 
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           {articles.map((art, idx) => (
             <div
               key={idx}
-              className="flex flex-col gap-0.5 p-2 rounded-xl border border-base-200/50 bg-base-200/20 hover:bg-base-200/40 transition-colors"
+              className="flex flex-col gap-0.5 p-1.5 px-2 rounded-xl border border-base-200/50 bg-base-200/20 hover:bg-base-200/40 transition-colors"
             >
               <p className="text-[10px] font-semibold text-base-content/85 line-clamp-2 leading-snug">
                 {art.title}
@@ -228,28 +228,6 @@ const SidebarRight = () => {
     <>
       <aside className="flex min-h-full flex-col gap-3 pb-8">
 
-        {/* Trending Topics — unchanged */}
-        <div className="rounded-xl bg-base-200 p-3">
-          <div className="mb-1.5 flex items-center gap-2 px-1">
-            <Flame size={15} className="text-[#1D4ED8]" />
-            <h3 className="text-[10px] font-black uppercase tracking-wider opacity-60">Trending</h3>
-          </div>
-          <ul className="space-y-0.5 text-sm font-semibold">
-            <li className="flex justify-between hover:bg-base-300 p-1 rounded-md transition-colors cursor-pointer">
-              <span>#DelhiRains</span>
-              <span className="opacity-40 text-xs">1.2k</span>
-            </li>
-            <li className="flex justify-between hover:bg-base-300 p-1 rounded-md transition-colors cursor-pointer">
-              <span>#TechHelp</span>
-              <span className="opacity-40 text-xs">856</span>
-            </li>
-            <li className="flex justify-between hover:bg-base-300 p-1 rounded-md transition-colors cursor-pointer">
-              <span>#LocalIssues</span>
-              <span className="opacity-40 text-xs">634</span>
-            </li>
-          </ul>
-        </div>
-
         {/* Trending News Widget */}
         <NewsWidgetCard />
 
@@ -257,7 +235,7 @@ const SidebarRight = () => {
         <QuoteWidgetCard />
 
         {/* 3D App Logo Section */}
-        <div className="-mt-4 flex flex-col items-center p-1">
+        <div className="mt-auto flex flex-col items-center p-1 pt-2">
           <motion.div
             className="relative flex h-24 w-24 items-center justify-center"
             initial={{ rotateY: 0, rotateX: 0 }}
@@ -284,7 +262,7 @@ const SidebarRight = () => {
               transition={{ duration: 0.8 }}
             />
           </motion.div>
-          <p className="mt-1.5 text-center text-[10px] font-black tracking-[0.4em] opacity-40 uppercase">
+          <p className="mt-2 text-center text-[10px] font-black tracking-[0.4em] opacity-40 uppercase">
             Govlyx
           </p>
         </div>
