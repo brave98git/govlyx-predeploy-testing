@@ -5,6 +5,7 @@ import AuthHeader from "../components/auth/AuthHeader";
 import AuthInput from "../components/auth/AuthInput";
 import { registerCitizen } from "../api/authService";
 import { Mail, Eye, EyeOff } from "lucide-react";
+import { parseError } from "../utils/error-handler";
 
 type RegisterType = "citizen" | "department";
 
@@ -69,15 +70,15 @@ const Register = () => {
 
       if (response.success) {
         setSuccess(
+          response.error ||
           response.message ||
             "Welcome to Govlyx!\nA verification link has been sent to your email address.\nPlease check your inbox and click the verification link to activate your account."
         );
       } else {
-        setError(response.message || "Registration failed");
+        setError(response.error || response.message || "Registration failed");
       }
     } catch (err: any) {
-      const msg = err.response?.data?.message || "Registration failed. Please try again.";
-      setError(msg);
+      setError(parseError(err));
     } finally {
       setLoading(false);
     }
@@ -117,7 +118,13 @@ const Register = () => {
       ) : (
         <>
           {/* Form */}
-          <div className="space-y-4">
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleRegister();
+            }}
+          >
             <AuthInput
               label="Email Address"
               type="email"
@@ -182,13 +189,13 @@ const Register = () => {
             />
 
             <button
+              type="submit"
               className="btn w-full bg-[#1D4ED8] text-white hover:bg-[#1D4ED8]/90 disabled:opacity-50 disabled:cursor-not-allowed h-12 rounded-xl mt-2 shadow-lg shadow-[#1D4ED8]/20 border-none"
-              onClick={handleRegister}
               disabled={loading}
             >
               {loading ? "Registering..." : "Join Govlyx"}
             </button>
-          </div>
+          </form>
 
           {/* Footer */}
           <p className="mt-6 text-center text-sm opacity-70">

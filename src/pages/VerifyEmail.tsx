@@ -5,6 +5,7 @@ import AuthHeader from "../components/auth/AuthHeader";
 import { CheckCircle2, XCircle, RefreshCw, ArrowRight, Mail } from "lucide-react";
 import { verifyEmail, resendVerification } from "../api/authService";
 import { showToast } from "../utils/toast";
+import { parseError } from "../utils/error-handler";
 
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
@@ -31,13 +32,13 @@ const VerifyEmail = () => {
       try {
         const data = await verifyEmail(token);
         if (data?.success) {
-          setSuccess(data?.message || "Email verified successfully!");
+          setSuccess(data?.error || data?.message || "Email verified successfully!");
         } else {
-          setError(data?.message || "Verification failed");
+          setError(data?.error || data?.message || "Verification failed");
         }
       } catch (err: any) {
         console.error("Email verification error:", err);
-        setError(err.response?.data?.message || "Verification failed. The token may be invalid or expired.");
+        setError(parseError(err));
       } finally {
         setLoading(false);
       }
@@ -57,10 +58,10 @@ const VerifyEmail = () => {
     setResendSuccess(null);
     try {
       const data = await resendVerification(resendEmail);
-      setResendSuccess(data.message || "Verification link resent successfully.");
+      setResendSuccess(data.error || data.message || "Verification link resent successfully.");
       showToast.success("Email sent!");
     } catch (err: any) {
-      showToast.error(err.response?.data?.message || "Failed to resend verification email.");
+      showToast.error(parseError(err));
     } finally {
       setResending(false);
     }

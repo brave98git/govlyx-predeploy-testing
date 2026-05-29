@@ -10,6 +10,9 @@ import { persistAuthToken } from "../utils/auth";
 import { showToast } from "../utils/toast";
 import { parseError } from "../utils/error-handler";
 
+const getAuthResponseMessage = (response: { message?: string; error?: string }) =>
+  response.error || response.message;
+
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,10 +39,9 @@ const Login = () => {
     setResendSuccess(null);
     try {
       const response = await resendVerification(form.email);
-      setResendSuccess(response.message || "Verification link resent successfully.");
+      setResendSuccess(getAuthResponseMessage(response) || "Verification link resent successfully.");
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || "Failed to resend verification email.";
-      showToast.error(errMsg);
+      showToast.error(parseError(err));
     } finally {
       setResending(false);
     }
@@ -68,15 +70,21 @@ const Login = () => {
         password: form.password,
       });
 
-      if (response.success && response.data?.token) {
+      const token =
+        response.data?.token ||
+        response.data?.authToken ||
+        response.data?.accessToken ||
+        response.data?.jwt;
+
+      if (response.success && token) {
         // Save JWT token under the keys used across the app
-        persistAuthToken(response.data.token);
+        persistAuthToken(token);
         // Ensure the query cache starts fresh for the new user session
         queryClient.clear();
         // Role-based redirect will be handled by DashboardRedirect at /dashboard
         navigate("/dashboard");
       } else {
-        setError(response.message || "Login failed");
+        setError(getAuthResponseMessage(response) || "Login failed");
       }
     } catch (err: any) {
       setError(parseError(err));
@@ -123,7 +131,13 @@ const Login = () => {
       )}
 
       {/* Form */}
-      <div className="space-y-4">
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
+        }}
+      >
         <AuthInput
           label="Email Address"
           type="email"
@@ -156,13 +170,13 @@ const Login = () => {
         </div>
 
         <button
+          type="submit"
           className="btn w-full bg-[#1D4ED8] text-white hover:bg-[#1D4ED8]/90 disabled:opacity-50 disabled:cursor-not-allowed h-12 rounded-xl mt-2 shadow-lg shadow-[#1D4ED8]/20 border-none"
-          onClick={handleLogin}
           disabled={loading}
         >
           {loading ? "Logging in..." : "Login to Portal"}
         </button>
-      </div>
+      </form>
 
       {/* Footer */}
       <p className="mt-6 text-center text-sm opacity-70">
