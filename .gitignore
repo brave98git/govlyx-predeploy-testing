@@ -24,4 +24,11 @@ dist-ssr
 *.sw?
 
 .idea/
+
+
 *.iml
+dev-dist/
+build_error.txt
+scratch_test.js
+print_user_inputs.js
+.antigravity_home_old.tsx
