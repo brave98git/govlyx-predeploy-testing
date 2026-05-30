@@ -156,7 +156,11 @@ const AppRouter = () => {
         />
         <Route
           path="/verify-email"
+<<<<<<< HEAD
           element={<PageWrapper className="w-full h-full"><VerifyEmail /></PageWrapper>}
+=======
+          element={<PageWrapper><VerifyEmail /></PageWrapper>}
+>>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
         />
 
         {/* ── Invite accept route ── */}
