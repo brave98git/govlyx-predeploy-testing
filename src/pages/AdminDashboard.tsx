@@ -79,7 +79,6 @@ const DepartmentBroadcastCount = ({ userId }: { userId: number }) => {
     let active = true;
     const getCount = async () => {
       try {
-<<<<<<< HEAD
         const postsRes = await axiosInstance.get(`/api/posts/user/${userId}`, { params: { limit: 150 } }).catch(() => null);
         let rawPosts = postsRes ? (postsRes.data?.data?.data ?? postsRes.data?.data?.content ?? postsRes.data?.data ?? postsRes.data?.content ?? []) : [];
 
@@ -91,12 +90,6 @@ const DepartmentBroadcastCount = ({ userId }: { userId: number }) => {
 
         if (active) {
           setCount(rawPosts.length);
-=======
-        const res = await axiosInstance.get(`/api/posts/count/user/${userId}`);
-        if (active && res.data) {
-          const cnt = res.data?.data ?? res.data;
-          setCount(Number(cnt));
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
         }
       } catch (err) {
         if (active) setCount(0);
@@ -144,10 +137,7 @@ const AdminDashboard = () => {
   // System Health Tab State
   const [healthData, setHealthData] = useState<any>(null);
   const [loadingHealth, setLoadingHealth] = useState<boolean>(false);
-<<<<<<< HEAD
   const [apiLatency, setApiLatency] = useState<number | null>(null);
-=======
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
   const [executingAction, setExecutingAction] = useState<string | null>(null);
 
   // Current user logic for dynamic admin profile footer
@@ -366,11 +356,7 @@ const AdminDashboard = () => {
         id: u.id,
         username: u.actualUsername || u.username,
         email: u.email,
-<<<<<<< HEAD
         pincode: u.primaryLocation || u.location || u.pincode || "N/A",
-=======
-        pincode: u.pincode || "N/A",
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
         role,
         status: u.isActive !== false ? "Active" : "Suspended",
         regDate: u.createdAt ? new Date(u.createdAt).toISOString().split("T")[0] : "N/A"
@@ -421,11 +407,7 @@ const AdminDashboard = () => {
         id: u.id,
         name: u.actualUsername || u.username,
         email: u.email || "",
-<<<<<<< HEAD
         pincode: u.primaryLocation || u.location || u.pincode || "N/A",
-=======
-        pincode: u.pincode || "N/A",
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
         status: u.isActive !== false ? "Active" : "Suspended",
         regDate: u.createdAt ? new Date(u.createdAt).toISOString().split("T")[0] : "N/A"
       }));
@@ -505,7 +487,6 @@ const AdminDashboard = () => {
   const fetchLiveBroadcasts = async () => {
     setLoadingBroadcasts(true);
     try {
-<<<<<<< HEAD
       const activeRes = await axiosInstance.get("/api/posts/broadcast?limit=100").catch(() => null);
       const activeData = activeRes?.data?.data?.data ?? activeRes?.data?.data?.content ?? (Array.isArray(activeRes?.data?.data) ? activeRes?.data?.data : null) ?? activeRes?.data?.content ?? [];
       const activeList: any[] = (Array.isArray(activeData) ? activeData : []).filter((p: any) => p.isGovernmentBroadcast);
@@ -534,21 +515,6 @@ const AdminDashboard = () => {
         page++;
 
         if (pageList.length < PAGE_SIZE) hasMore = false;
-=======
-      const res = await axiosInstance.get("/api/posts/broadcast?limit=50");
-      const data = res.data?.data?.data ?? res.data?.data?.content ?? res.data?.data ?? res.data?.content ?? [];
-      if (Array.isArray(data)) {
-        const mapped = data.map((b: any) => ({
-          id: b.id,
-          username: b.username || b.author?.username || "System",
-          scope: b.broadcastScope || "AREA",
-          target: b.targetPincodes?.join(", ") || b.targetDistricts?.join(", ") || b.targetStates?.join(", ") || b.targetCountry || "N/A",
-          posted: b.createdAt ? new Date(b.createdAt).toLocaleString() : "N/A",
-          resolved: b.resolved ? "Yes" : "No",
-          content: b.content
-        }));
-        setBroadcastsList(mapped);
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
       }
 
       const seen = new Set<number>();
@@ -588,16 +554,11 @@ const AdminDashboard = () => {
 
   const fetchSystemHealth = async () => {
     setLoadingHealth(true);
-<<<<<<< HEAD
     const startTime = performance.now();
     try {
       const res = await axiosInstance.get("/api/admin/system/health");
       const endTime = performance.now();
       setApiLatency(Math.round(endTime - startTime));
-=======
-    try {
-      const res = await axiosInstance.get("/api/admin/system/health");
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
       const data = res.data?.data ?? res.data;
       setHealthData(data);
     } catch (err) {
@@ -933,7 +894,6 @@ const AdminDashboard = () => {
       return;
     }
 
-<<<<<<< HEAD
     const isCitizen = user.role === "ROLE_USER";
     const countUrl = isCitizen ? `/api/social-posts/count/user/${user.id}` : `/api/posts/count/user/${user.id}`;
     const postsUrl = isCitizen ? `/api/social-posts/user/${user.id}` : `/api/posts/user/${user.id}`;
@@ -1000,30 +960,6 @@ const AdminDashboard = () => {
     setResolveForm({ resolution: "RESOLVED_REMOVED", notes: "" });
   };
 
-=======
-  // User Management actions (Soft delete deactivation)
-  const handleDeactivateUser = async (userId: number) => {
-    if (!window.confirm("Are you sure you want to deactivate this user account?")) {
-      return;
-    }
-    try {
-      await axiosInstance.delete(`/api/admin/users/${userId}`);
-      showToast.success("User account deactivated successfully");
-      fetchLiveUsers();
-      fetchLiveDepartments();
-    } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || "Failed to deactivate user";
-      showToast.error(errMsg);
-    }
-  };
-
-  // Content moderation actions
-  const handleOpenResolveDialog = (reportId: number) => {
-    setResolvingReportId(reportId);
-    setResolveForm({ resolution: "RESOLVED_REMOVED", notes: "" });
-  };
-
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
   const submitResolveReport = async () => {
     if (!resolvingReportId) return;
     if (!resolveForm.notes.trim()) {
@@ -2381,10 +2317,6 @@ const AdminDashboard = () => {
                     <div className="admin-card-head">
                       <div>
                         <div className="admin-card-title">Platform Metrics</div>
-<<<<<<< HEAD
-=======
-                        <div className="admin-card-subtitle">/api/posts/broadcast/statistics</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                       </div>
                     </div>
                     <div className="admin-card-body">
@@ -2419,10 +2351,6 @@ const AdminDashboard = () => {
                   <div className="admin-card-head">
                     <div>
                       <div className="admin-card-title">Recently Registered Departments</div>
-<<<<<<< HEAD
-=======
-                      <div className="admin-card-subtitle">GFT /api/users/by-role/ROLE_DEPARTMENT</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                     </div>
                     <button className="admin-btn admin-btn-secondary admin-btn-sm" onClick={() => setActiveTab("departments")}>View All</button>
                   </div>
@@ -2456,11 +2384,7 @@ const AdminDashboard = () => {
                             </tr>
                           ) : (
                             deptsDb.slice(0, 5).map(dept => (
-<<<<<<< HEAD
                               <tr key={dept.id} className="user-row cursor-pointer" onClick={() => handleOpenDetails({ id: dept.id, username: dept.name, email: dept.email, pincode: dept.pincode, role: "ROLE_DEPARTMENT", status: dept.status, regDate: dept.regDate })}>
-=======
-                              <tr key={dept.id} className="user-row cursor-pointer" onClick={() => handleOpenDetails({ username: dept.name, email: dept.email, pincode: dept.pincode, role: "ROLE_DEPARTMENT", status: dept.status, regDate: dept.regDate })}>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                                 <td>
                                   <div className="flex items-center gap-2">
                                     <div className="admin-u-avatar admin-ua-blue">{dept.name.charAt(0).toUpperCase()}</div>
@@ -2609,21 +2533,12 @@ const AdminDashboard = () => {
 
                       <div className="admin-form-section-title">Permissions Provisioned</div>
                       <div className="admin-tag-grid mb-6">
-<<<<<<< HEAD
                         <span className="admin-tag">Publish Broadcasts</span>
                         <span className="admin-tag">Resolve Issues</span>
                         <span className="admin-tag">View User Distribution</span>
                         <span className="admin-tag">View Broadcast Analytics</span>
                         <span className="admin-tag">Publish Country-wide Broadcasts</span>
                         <span className="admin-tag">View Department Accounts</span>
-=======
-                        <span className="admin-tag">POST /api/posts/broadcast</span>
-                        <span className="admin-tag">PUT /api/posts/{"{id}"}/resolution</span>
-                        <span className="admin-tag">GET /api/users/distribution/*</span>
-                        <span className="admin-tag">GET /api/posts/broadcast/analytics</span>
-                        <span className="admin-tag">POST /api/posts/broadcast/country</span>
-                        <span className="admin-tag">GET /api/users/departments/*</span>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                       </div>
 
                       <div className="admin-btn-actions">
@@ -2773,7 +2688,6 @@ const AdminDashboard = () => {
 
                       <div className="admin-form-section-title">Full Permissions Granted</div>
                       <div className="admin-tag-grid mb-6">
-<<<<<<< HEAD
                         <span className="admin-tag">Manage Registrations</span>
                         <span className="admin-tag">Manage Posts & Content</span>
                         <span className="admin-tag">Manage User Accounts</span>
@@ -2782,16 +2696,6 @@ const AdminDashboard = () => {
                         <span className="admin-tag">Execute System Cleanup</span>
                         <span className="admin-tag">Manage Resolutions</span>
                         <span className="admin-tag">Manage User Tagging</span>
-=======
-                        <span className="admin-tag">ALL /api/auth/register/*</span>
-                        <span className="admin-tag">ALL /api/posts/*</span>
-                        <span className="admin-tag">ALL /api/users/*</span>
-                        <span className="admin-tag">ALL /api/communities/*</span>
-                        <span className="admin-tag">GET /api/chat/admin/statistics</span>
-                        <span className="admin-tag">POST /api/posts/cleanup/files</span>
-                        <span className="admin-tag">GET /api/posts/resolved</span>
-                        <span className="admin-tag">ALL /api/user-tagging/*</span>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                       </div>
 
                       <div className="admin-btn-actions">
@@ -2821,10 +2725,6 @@ const AdminDashboard = () => {
                 <div className="admin-section-header">
                   <div>
                     <div className="admin-section-title">All Users</div>
-<<<<<<< HEAD
-=======
-                    <div className="admin-section-sub font-mono">GET /api/users/active · GET /api/users/by-role/{"{role}"}</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -3039,10 +2939,6 @@ const AdminDashboard = () => {
                 <div className="admin-section-header">
                   <div>
                     <div className="admin-section-title">Government Departments</div>
-<<<<<<< HEAD
-=======
-                    <div className="admin-section-sub font-mono">GET /api/users/departments/by-pincode · by-state · by-district</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   </div>
                   <button
                     className="admin-btn admin-btn-primary admin-btn-sm"
@@ -3110,11 +3006,7 @@ const AdminDashboard = () => {
                               d.pincode.includes(searchQuery)
                             )
                             .map(dept => (
-<<<<<<< HEAD
                               <tr key={dept.id} className="user-row cursor-pointer" onClick={() => handleOpenDetails({ id: dept.id, username: dept.name, email: dept.email, pincode: dept.pincode, role: "ROLE_DEPARTMENT", status: dept.status, regDate: dept.regDate })}>
-=======
-                              <tr key={dept.id} className="user-row cursor-pointer" onClick={() => handleOpenDetails({ username: dept.name, email: dept.email, pincode: dept.pincode, role: "ROLE_DEPARTMENT", status: dept.status, regDate: dept.regDate })}>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                                 <td>
                                   <div className="flex items-center gap-2">
                                     <div className="admin-u-avatar admin-ua-blue">{dept.name.charAt(0).toUpperCase()}</div>
@@ -3137,11 +3029,7 @@ const AdminDashboard = () => {
                                   <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                                     <button
                                       className="admin-btn admin-btn-sm admin-btn-secondary"
-<<<<<<< HEAD
                                       onClick={() => handleOpenDetails({ id: dept.id, username: dept.name, email: dept.email, pincode: dept.pincode, role: "ROLE_DEPARTMENT", status: dept.status, regDate: dept.regDate })}
-=======
-                                      onClick={() => handleOpenDetails({ username: dept.name, email: dept.email, pincode: dept.pincode, role: "ROLE_DEPARTMENT", status: dept.status, regDate: dept.regDate })}
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                                     >
                                       Details
                                     </button>
@@ -3221,10 +3109,6 @@ const AdminDashboard = () => {
                         <tr>
                           <th>COMMUNITY</th>
                           <th>MEMBERS</th>
-<<<<<<< HEAD
-=======
-                          <th>POSTS/7D</th>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                           <th>HEALTH SCORE</th>
                           <th>TIER</th>
                           <th>FEED REACH</th>
@@ -3254,11 +3138,7 @@ const AdminDashboard = () => {
                           if (filteredComms.length === 0) {
                             return (
                               <tr>
-<<<<<<< HEAD
                                 <td colSpan={6} className="text-center py-8 text-sm text-[var(--text-muted)] italic">
-=======
-                                <td colSpan={7} className="text-center py-8 text-sm text-[var(--text-muted)] italic">
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                                   No communities found matching filters.
                                 </td>
                               </tr>
@@ -3266,7 +3146,6 @@ const AdminDashboard = () => {
                           }
 
                           return filteredComms.map(comm => {
-<<<<<<< HEAD
                             // Derived feed reach scope from real locationName / wardName
                             let feedReach = "National";
                             if (comm.privacy !== "PUBLIC" || !comm.feedEligible) {
@@ -3275,18 +3154,6 @@ const AdminDashboard = () => {
                               feedReach = `Ward (${comm.wardName})`;
                             } else if (comm.locationName) {
                               feedReach = `Local (${comm.locationName})`;
-=======
-                            // Derived feed reach scope
-                            let feedReach = "National";
-                            if (comm.privacy !== "PUBLIC" || !comm.feedEligible) {
-                              feedReach = "None (Private)";
-                            } else if (comm.pincode) {
-                              feedReach = `Local (${comm.pincode})`;
-                            } else if (comm.districtPrefix) {
-                              feedReach = `District (${comm.districtPrefix})`;
-                            } else if (comm.statePrefix) {
-                              feedReach = `State (${comm.statePrefix})`;
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                             }
 
                             // Match status of active/archived to health score updates
@@ -3306,10 +3173,6 @@ const AdminDashboard = () => {
                                   </div>
                                 </td>
                                 <td>{comm.memberCount ?? 0}</td>
-<<<<<<< HEAD
-=======
-                                <td>{comm.postsLast7d ?? 0}</td>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                                 <td>
                                   <div className="flex items-center gap-2">
                                     <span className="font-mono text-xs font-bold">{healthVal.toFixed(0)}%</span>
@@ -3380,11 +3243,7 @@ const AdminDashboard = () => {
                 </div>
 
                 {/* Stats Cards */}
-<<<<<<< HEAD
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-=======
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   <div className="admin-card p-4 flex flex-col justify-between h-24 bg-amber-500/5 border-amber-500/10">
                     <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Bad Words Loaded</span>
                     <span className="text-2xl font-black text-amber-500">{overviewStats?.badWordsLoaded ?? 0}</span>
@@ -3399,17 +3258,6 @@ const AdminDashboard = () => {
                     <span className="text-[10px] uppercase font-black tracking-wider text-rose-500">Pending Reports</span>
                     <span className="text-2xl font-black text-rose-500">{moderationStats.totalPending}</span>
                   </div>
-<<<<<<< HEAD
-=======
-                  <div className="admin-card p-4 flex flex-col justify-between h-24 bg-blue-500/5 border-blue-500/10">
-                    <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Orphan Files</span>
-                    <span className="text-2xl font-black text-blue-400">24</span>
-                  </div>
-                  <div className="admin-card p-4 flex flex-col justify-between h-24 bg-emerald-500/5 border-emerald-500/10">
-                    <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Validation Pass Rate</span>
-                    <span className="text-2xl font-black text-emerald-500">99.4%</span>
-                  </div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                 </div>
 
                 {/* Two-Column Grid */}
@@ -3419,10 +3267,6 @@ const AdminDashboard = () => {
                     <div className="admin-card-head">
                       <div>
                         <div className="admin-card-title">Recent Flagged Content</div>
-<<<<<<< HEAD
-=======
-                        <div className="admin-card-subtitle">GET /api/reports/admin/all</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                       </div>
                     </div>
                     <div className="admin-card-body p-0">
@@ -3591,13 +3435,8 @@ const AdminDashboard = () => {
                   </div>
                 </div>
 
-<<<<<<< HEAD
                 {/* Middle row stats: Active Sessions, Queue Size */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-=======
-                {/* Middle row stats: Active Sessions, Queue Size, Sessions Today (simulated), Avg Session Length (simulated) */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   <div className="admin-card p-4 flex flex-col justify-between h-24">
                     <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Active Sessions</span>
                     <span className="text-2xl font-black text-blue-400">{liveSessions}</span>
@@ -3606,97 +3445,6 @@ const AdminDashboard = () => {
                     <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Queue Size</span>
                     <span className="text-2xl font-black text-amber-500">{overviewStats?.chatQueueSize ?? 0}</span>
                   </div>
-<<<<<<< HEAD
-=======
-                  <div className="admin-card p-4 flex flex-col justify-between h-24">
-                    <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Sessions Today</span>
-                    <span className="text-2xl font-black text-emerald-500">142</span>
-                  </div>
-                  <div className="admin-card p-4 flex flex-col justify-between h-24">
-                    <span className="text-[10px] uppercase font-black tracking-wider opacity-60">Avg. Session Length</span>
-                    <span className="text-2xl font-black text-indigo-400">4m 12s</span>
-                  </div>
-                </div>
-
-                {/* Bottom Section: Left timeline SVG line graph; Right column scheduled cron tasks checklist status */}
-                <div className="admin-two-col">
-                  {/* Left Column: Chat Activity Timeline */}
-                  <div className="admin-card">
-                    <div className="admin-card-head">
-                      <div>
-                        <div className="admin-card-title">Chat Activity Timeline</div>
-                        <div className="admin-card-subtitle">Active chats count over the last 24 hours</div>
-                      </div>
-                    </div>
-                    <div className="admin-card-body">
-                      <svg viewBox="0 0 500 150" className="w-full h-32 mt-2">
-                        <defs>
-                          <linearGradient id="chatChartGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <path 
-                          d="M 0 120 C 50 110, 100 80, 150 90 C 200 100, 250 50, 300 40 C 350 30, 400 70, 450 30 C 475 10, 500 20, 500 20 L 500 150 L 0 150 Z" 
-                          fill="url(#chatChartGrad)" 
-                        />
-                        <path 
-                          d="M 0 120 C 50 110, 100 80, 150 90 C 200 100, 250 50, 300 40 C 350 30, 400 70, 450 30 C 475 10, 500 20, 500 20" 
-                          fill="none" 
-                          stroke="#3b82f6" 
-                          strokeWidth="3" 
-                        />
-                        <circle cx="300" cy="40" r="4" fill="#3b82f6" stroke="#ffffff" strokeWidth="2" />
-                        <text x="310" y="35" fill="var(--text-secondary)" fontSize="10" fontFamily="var(--font-mono)">Peak: 300 active</text>
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Scheduled Cron Tasks checklist */}
-                  <div className="admin-card">
-                    <div className="admin-card-head">
-                      <div>
-                        <div className="admin-card-title">System Schedulers (Cron)</div>
-                        <div className="admin-card-subtitle">Status of recurring backend tasks</div>
-                      </div>
-                    </div>
-                    <div className="admin-card-body p-0">
-                      <div className="admin-table-scroll">
-                        <table className="admin-data-table">
-                          <thead>
-                            <tr>
-                              <th>TASK DESCRIPTION</th>
-                              <th>CRON</th>
-                              <th>STATUS</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td>Profanity Sync</td>
-                              <td><span className="font-mono text-xs text-[var(--text-muted)]">0 0 * * *</span></td>
-                              <td><span className="admin-badge admin-badge-active">Completed</span></td>
-                            </tr>
-                            <tr>
-                              <td>Notification Pruning</td>
-                              <td><span className="font-mono text-xs text-[var(--text-muted)]">0 2 * * *</span></td>
-                              <td><span className="admin-badge admin-badge-active">Completed</span></td>
-                            </tr>
-                            <tr>
-                              <td>Community Health Sync</td>
-                              <td><span className="font-mono text-xs text-[var(--text-muted)]">0 */6 * * *</span></td>
-                              <td><span className="admin-badge admin-badge-pending">Running</span></td>
-                            </tr>
-                            <tr>
-                              <td>Weekly Counters Reset</td>
-                              <td><span className="font-mono text-xs text-[var(--text-muted)]">0 0 * * 0</span></td>
-                              <td><span className="admin-badge admin-badge-active">Completed</span></td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  </div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                 </div>
               </motion.div>
             )}
@@ -3712,10 +3460,6 @@ const AdminDashboard = () => {
                 <div className="admin-section-header">
                   <div>
                     <div className="admin-section-title">Broadcast Management</div>
-<<<<<<< HEAD
-=======
-                    <div className="admin-section-sub">GET /api/posts/broadcast/analytics · /api/posts/broadcast/statistics</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   </div>
                   <button className="admin-btn admin-btn-secondary admin-btn-sm" onClick={fetchLiveBroadcasts} disabled={loadingBroadcasts}>
                     <RefreshCw size={13} className={loadingBroadcasts ? "animate-spin mr-1" : "mr-1"} /> Refresh Broadcasts
@@ -3725,41 +3469,25 @@ const AdminDashboard = () => {
                 <div className="admin-mini-stat-row" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
                   <div className="admin-mini-stat">
                     <div className="admin-mini-val" style={{ color: "var(--accent)" }}>
-<<<<<<< HEAD
                       {broadcastsList.filter((b: any) => b.scope === "COUNTRY").length}
-=======
-                      {broadcastStats?.broadcastsCOUNTRY ?? broadcastStats?.countryWideBroadcasts ?? 0}
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                     </div>
                     <div className="admin-mini-label">Country Wide</div>
                   </div>
                   <div className="admin-mini-stat">
                     <div className="admin-mini-val" style={{ color: "var(--accent2)" }}>
-<<<<<<< HEAD
                       {broadcastsList.filter((b: any) => b.scope === "STATE").length}
-=======
-                      {broadcastStats?.broadcastsSTATE ?? 0}
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                     </div>
                     <div className="admin-mini-label">State Level</div>
                   </div>
                   <div className="admin-mini-stat">
                     <div className="admin-mini-val" style={{ color: "var(--success)" }}>
-<<<<<<< HEAD
                       {broadcastsList.filter((b: any) => b.scope === "DISTRICT").length}
-=======
-                      {broadcastStats?.broadcastsDISTRICT ?? 0}
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                     </div>
                     <div className="admin-mini-label">District Level</div>
                   </div>
                   <div className="admin-mini-stat">
                     <div className="admin-mini-val" style={{ color: "var(--warn)" }}>
-<<<<<<< HEAD
                       {broadcastsList.filter((b: any) => b.scope === "AREA").length}
-=======
-                      {broadcastStats?.broadcastsAREA ?? 0}
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                     </div>
                     <div className="admin-mini-label">Area (Pincode)</div>
                   </div>
@@ -3767,11 +3495,7 @@ const AdminDashboard = () => {
 
                 <div className="admin-card">
                   <div className="admin-card-head">
-<<<<<<< HEAD
                     <div className="admin-card-title">All Broadcasts {broadcastsList.length > 0 && <span style={{ fontSize: "12px", color: "var(--text-secondary)", fontWeight: 400 }}>({broadcastsList.length} loaded)</span>}</div>
-=======
-                    <div className="admin-card-title">Recent Broadcasts</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   </div>
                   <div className="admin-card-body p-0">
                     <div className="admin-table-scroll">
@@ -3852,23 +3576,12 @@ const AdminDashboard = () => {
                   </button>
                 </div>
 
-<<<<<<< HEAD
                 <div className="admin-mini-stat-row" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
                   <div className="admin-mini-stat">
                     <div className="admin-mini-val" style={{ color: "var(--accent2)" }}>
                       {apiLatency !== null ? `${apiLatency}ms` : "..."}
                     </div>
                     <div className="admin-mini-label">API Latency</div>
-=======
-                <div className="admin-mini-stat-row" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-                  <div className="admin-mini-stat">
-                    <div className="admin-mini-val" style={{ color: "var(--success)" }}>99.8%</div>
-                    <div className="admin-mini-label">API Uptime</div>
-                  </div>
-                  <div className="admin-mini-stat">
-                    <div className="admin-mini-val" style={{ color: "var(--accent2)" }}>38ms</div>
-                    <div className="admin-mini-label">Avg Latency</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                   </div>
                   <div className="admin-mini-stat">
                     <div className="admin-mini-val" style={{ color: "var(--warn)" }}>
@@ -3907,21 +3620,9 @@ const AdminDashboard = () => {
                             </div>
                           ))
                         ) : (
-<<<<<<< HEAD
                           <div className="text-center py-6 text-xs text-rose-500/80 font-bold italic">
                             Failed to retrieve service status from server.
                           </div>
-=======
-                          <>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">AuthController &amp; JWT</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">PostService (Cloudinary)</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">NotificationService</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">ChatSessionService</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">MatchmakingService</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">BadWordService</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                            <div className="admin-qstat-row"><div className="admin-qstat-label">CommunityService</div><span className="admin-badge admin-badge-active">Healthy</span></div>
-                          </>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                         )}
                       </div>
                     </div>
@@ -4336,17 +4037,7 @@ const AdminDashboard = () => {
                   <div className={`admin-posts-panel-stat-val ${selectedUserForDetails.status === "Active" ? "text-[var(--success)]" : "text-[var(--danger)]"}`}>
                     {selectedUserForDetails.status || "Active"}
                   </div>
-<<<<<<< HEAD
                   <div className="admin-posts-panel-stat-lbl">Account Status</div>
-=======
-                  <div className="admin-posts-panel-stat-lbl">Reputation</div>
-                </div>
-                <div className="admin-posts-panel-stat">
-                  <div className="admin-posts-panel-stat-val text-[var(--accent2)]">
-                    {selectedUserForDetails.role === "ROLE_ADMIN" ? "Admin" : "Verified"}
-                  </div>
-                  <div className="admin-posts-panel-stat-lbl">Status</div>
->>>>>>> 0e256a2477261fb27df7ee2e0276fa1c183a3d9a
                 </div>
               </div>
             </div>
